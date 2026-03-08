@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>QuestAcademy — SpawnZone</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap');
+
+  :root {
+    --sky1: #1a0533;
+    --sky2: #0d1b6e;
+    --sky3: #6a0dad;
+    --accent: #ffe066;
+    --accent2: #ff6bdf;
+    --accent3: #44f7c8;
+    --accent4: #ff4e4e;
+    --ui-bg: rgba(10,5,30,0.82);
+    --ui-border: rgba(255,224,102,0.25);
+    --text: #f0e6ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--sky1);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  canvas { display: block; }
+
+  /* AUTH SCREEN */
+  #auth-screen {
+    position: fixed; inset: 0; z-index: 100;
+    background: linear-gradient(135deg, #1a0533 0%, #0d1b6e 50%, #6a0dad 100%);
+    display: flex; align-items: center; justify-content: center;
+    animation: fadeIn .5s ease;
+  }
+  #auth-screen.hidden { display: none; }
+
+  .stars-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .star {
+    position: absolute; border-radius: 50%; background: white;
+    animation: twinkle 2s infinite alternate;
+  }
+
+  @keyframes twinkle { from { opacity: .2; } to { opacity: 1; } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse-glow {
+    0%,100% { box-shadow: 0 0 20px rgba(255,224,102,.4), 0 0 40px rgba(255,107,223,.2); }
+    50%      { box-shadow: 0 0 35px rgba(255,224,102,.7), 0 0 70px rgba(255,107,223,.4); }
+  }
+  @keyframes float {
+    0%,100% { transform: translateY(0px); }
+    50%     { transform: translateY(-8px); }
+  }
+
+  .auth-card {
+    position: relative; z-index: 2;
+    background: rgba(10,5,30,0.9);
+    border: 2px solid var(--accent);
+    border-radius: 24px; padding: 40px 44px;
+    width: 420px; max-width: 95vw;
+    animation: slideUp .6s ease, pulse-glow 3s infinite;
+  }
+
+  .auth-logo { text-align: center; margin-bottom: 28px; animation: float 3s ease-in-out infinite; }
+  .auth-logo .logo-emoji { font-size: 52px; display: block; margin-bottom: 6px; }
+  .auth-logo h1 {
+    font-family: 'Bangers', cursive; font-size: 38px; letter-spacing: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .auth-logo p { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; letter-spacing: 2px; text-transform: uppercase; }
+
+  .auth-tabs {
+    display: flex; gap: 4px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px; padding: 4px; margin-bottom: 24px;
+  }
+  .auth-tab {
+    flex: 1; padding: 8px; border: none; background: transparent;
+    color: rgba(255,255,255,0.5); font-family: 'Nunito', sans-serif;
+    font-weight: 700; font-size: 14px; cursor: pointer; border-radius: 9px; transition: all .2s;
+  }
+  .auth-tab.active { background: var(--accent); color: #1a0533; }
+
+  .auth-field { margin-bottom: 16px; }
+  .auth-field label {
+    display: block; font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px; color: var(--accent3); margin-bottom: 6px;
+  }
+  .auth-field input {
+    width: 100%; padding: 12px 16px;
+    background: rgba(255,255,255,0.07);
+    border: 1.5px solid rgba(255,255,255,0.12);
+    border-radius: 12px; color: white;
+    font-family: 'Nunito', sans-serif; font-size: 15px;
+    transition: border-color .2s, box-shadow .2s; outline: none;
+  }
+  .auth-field input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(255,224,102,0.15);
+  }
+
+  .auth-btn {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, var(--accent), #ffb800);
+    border: none; border-radius: 14px;
+    font-family: 'Bangers', cursive; font-size: 20px; letter-spacing: 2px;
+    color: #1a0533; cursor: pointer;
+    transition: transform .15s, box-shadow .15s; margin-top: 8px;
+  }
+  .auth-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,224,102,.5); }
+  .auth-btn:active { transform: translateY(0); }
+  .auth-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+  .auth-error {
+    background: rgba(255,78,78,0.15); border: 1px solid rgba(255,78,78,0.4);
+    border-radius: 10px; padding: 10px 14px;
+    font-size: 13px; color: #ff9b9b; margin-bottom: 14px; display: none;
+  }
+  .auth-error.show { display: block; }
+
+  .auth-demo {
+    text-align: center; margin-top: 14px;
+    font-size: 12px; color: rgba(255,255,255,0.3);
+  }
+  .auth-demo a { color: var(--accent3); cursor: pointer; text-decoration: underline; }
+
+  /* HUD */
+  #hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+
+  .hud-top {
+    position: absolute; top: 16px; left: 16px; right: 16px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    pointer-events: auto;
+  }
+
+  .player-card {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--ui-bg); border: 1.5px solid var(--ui-border);
+    border-radius: 18px; padding: 10px 16px;
+    backdrop-filter: blur(12px); animation: slideUp .4s ease;
+  }
+  .player-avatar {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 900; color: #1a0533; flex-shrink: 0;
+  }
+  .player-name { font-weight: 800; font-size: 15px; color: white; }
+  .player-meta { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 1px; }
+  .player-meta span { color: var(--accent); font-weight: 700; }
+
+  .hud-buttons { display: flex; gap: 8px; }
+  .hud-btn {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: var(--ui-bg); border: 1.5px solid var(--ui-border);
+    color: rgba(255,255,255,0.6); font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(12px); transition: all .2s;
+  }
+  .hud-btn:hover { color: var(--accent); border-color: var(--accent); transform: scale(1.1); }
+
+  .controls-hint {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--ui-bg); border: 1px solid var(--ui-border);
+    border-radius: 20px; padding: 8px 20px;
+    font-size: 12px; color: rgba(255,255,255,0.45); letter-spacing: 1px;
+    backdrop-filter: blur(8px); pointer-events: none; white-space: nowrap;
+  }
+
+  #portal-prompt {
+    position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, rgba(255,224,102,0.15), rgba(255,107,223,0.15));
+    border: 2px solid var(--accent); border-radius: 16px; padding: 10px 24px;
+    font-family: 'Bangers', cursive; font-size: 18px; letter-spacing: 2px;
+    color: var(--accent); pointer-events: none;
+    animation: pulse-glow 1.5s infinite; display: none; backdrop-filter: blur(8px);
+  }
+
+  /* LEADERBOARD PANELS */
+  .lb-panel {
+    position: absolute; pointer-events: auto;
+    background: var(--ui-bg); border: 1.5px solid var(--ui-border);
+    border-radius: 18px; padding: 14px 16px;
+    backdrop-filter: blur(12px); width: 200px; animation: slideUp .5s ease;
+  }
+  .lb-panel.left  { left: 16px; bottom: 80px; }
+  .lb-panel.right { right: 16px; bottom: 80px; }
+  .lb-panel.mid   { left: 50%; transform: translateX(-50%); bottom: 80px; }
+
+  .lb-title {
+    font-family: 'Bangers', cursive; font-size: 15px; letter-spacing: 2px;
+    margin-bottom: 8px; display: flex; align-items: center; gap: 5px;
+  }
+  .lb-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 12px;
+  }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-rank { font-family: 'Bangers', cursive; font-size: 14px; color: rgba(255,255,255,0.3); width: 18px; }
+  .lb-rank.gold   { color: var(--accent); }
+  .lb-rank.silver { color: #c0c0c0; }
+  .lb-rank.bronze { color: #cd7f32; }
+  .lb-player { flex: 1; font-weight: 700; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-score  { font-weight: 800; color: var(--accent3); font-size: 11px; }
+
+  /* TOAST */
+  #toast {
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, #1a0533, #0d1b6e);
+    border: 2px solid var(--accent3); border-radius: 14px; padding: 12px 24px;
+    font-weight: 700; font-size: 14px; color: var(--accent3);
+    z-index: 200; pointer-events: none;
+    opacity: 0; transition: opacity .3s; white-space: nowrap;
+  }
+  #toast.show { opacity: 1; }
+
+  /* LOADING */
+  #loading {
+    position: fixed; inset: 0; z-index: 300; background: #1a0533;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; transition: opacity .5s;
+  }
+  #loading.fade { opacity: 0; pointer-events: none; }
+  .loading-logo {
+    font-family: 'Bangers', cursive; font-size: 52px; letter-spacing: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .loading-bar-wrap { width: 240px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; }
+  .loading-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; width: 0%; transition: width .4s; }
+  .loading-text { font-size: 13px; color: rgba(255,255,255,0.4); letter-spacing: 2px; }
+
+  /* SUPABASE SETUP BANNER */
+  #setup-banner {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+    background: rgba(255,224,102,0.1); border-top: 1px solid rgba(255,224,102,0.3);
+    padding: 8px 16px; font-size: 12px; color: var(--accent);
+    text-align: center; backdrop-filter: blur(8px);
+    display: none;
+  }
+  #setup-banner.show { display: block; }
+  #setup-banner code { background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="loading-logo">⚔️ QUESTACADEMY</div>
+  <div class="loading-bar-wrap"><div class="loading-bar" id="loading-bar"></div></div>
+  <div class="loading-text" id="loading-text">INITIALIZING WORLD...</div>
+</div>
+
+<div id="auth-screen">
+  <div class="stars-bg" id="stars-bg"></div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="logo-emoji">⚔️</span>
+      <h1>QUESTACADEMY</h1>
+      <p>Learn &bull; Battle &bull; Conquer</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login"    onclick="switchTab('login')">Login</button>
+      <button class="auth-tab"        id="tab-register" onclick="switchTab('register')">Register</button>
+    </div>
+    <div class="auth-error" id="auth-error"></div>
+
+    <div id="login-form">
+      <div class="auth-field"><label>Username</label><input type="text"     id="login-username" placeholder="Enter your username"/></div>
+      <div class="auth-field"><label>Password</label><input type="password" id="login-password" placeholder="Enter your password"/></div>
+      <button class="auth-btn" id="login-btn" onclick="handleLogin()">&#9876; ENTER THE WORLD</button>
+    </div>
+
+    <div id="register-form" style="display:none">
+      <div class="auth-field"><label>Username</label><input type="text"     id="reg-username" placeholder="Choose a username (3+ chars)"/></div>
+      <div class="auth-field"><label>Email</label>   <input type="email"    id="reg-email"    placeholder="your@email.com"/></div>
+      <div class="auth-field"><label>Password</label><input type="password" id="reg-password" placeholder="Create a password (6+ chars)"/></div>
+      <button class="auth-btn" id="reg-btn" onclick="handleRegister()">&#11088; CREATE HERO</button>
+    </div>
+
+    <div class="auth-demo">
+      No Supabase yet? <a onclick="enterDemoMode()">Play in demo mode</a>
+    </div>
+  </div>
+</div>
+
+<canvas id="game-canvas"></canvas>
+
+<div id="hud" style="display:none">
+  <div class="hud-top">
+    <div class="player-card">
+      <div class="player-avatar" id="hud-avatar">?</div>
+      <div>
+        <div class="player-name" id="hud-username">Hero</div>
+        <div class="player-meta">Lv.<span id="hud-level">1</span> &nbsp;&middot;&nbsp; <span id="hud-bucks">0</span> &#128176; Digi-Bucks</div>
+      </div>
+    </div>
+    <div class="hud-buttons">
+      <button class="hud-btn" title="Profile"   onclick="showToast('👤 Profile — check the leaderboard below!')">👤</button>
+      <button class="hud-btn" title="Quests"    onclick="window.location.href='World0_Grasslands.html'">📜</button>
+      <button class="hud-btn" title="Inventory" onclick="showToast('🎒 Inventory — collect items in the Campaign worlds!')">🎒</button>
+      <button class="hud-btn" title="Logout"    onclick="handleLogout()">🚪</button>
+    </div>
+  </div>
+
+  <div class="lb-panel left">
+    <div class="lb-title" style="color:var(--accent)">&#128176; Rich List</div>
+    <div id="lb-bucks"></div>
+  </div>
+  <div class="lb-panel mid">
+    <div class="lb-title" style="color:var(--accent3)">&#11088; Top Levels</div>
+    <div id="lb-level"></div>
+  </div>
+  <div class="lb-panel right">
+    <div class="lb-title" style="color:var(--accent2)">&#9876; PvP Kings</div>
+    <div id="lb-pvp"></div>
+  </div>
+
+  <div class="controls-hint">WASD &middot; Right-click drag camera &middot; E to enter portal</div>
+  <div id="portal-prompt">&#127744; Press E to Enter Portal</div>
+</div>
+
+<div id="toast"></div>
+
+<div id="setup-banner">
+  &#9888; Demo mode — to enable real accounts, open this file and set <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> at the top of the script, then create a <code>players</code> table in Supabase.
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="qa_client.js"></script>
+<script>
+const SUPABASE_URL      = 'https://lueqmpytuwxaotwmkgna.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_7JTnHKJUYwp5ZZ_lSfVG9w_xtt239VB';
+
+// ── Supabase REST helpers (no SDK needed) ──
+const sb = {
+  headers() {
+    return {
+      'Content-Type':'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+    };
+  },
+  async select(table, qs='') {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${qs}`, { headers: this.headers() });
+    return r.json();
+  },
+  async insert(table, row) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method:'POST', headers:{...this.headers(), 'Prefer':'return=representation'}, body:JSON.stringify(row)
+    }); return r.json();
+  }
+};
+
+// Supabase players table schema (run this SQL in Supabase):
+/*
+create table players (
+  id            uuid primary key default gen_random_uuid(),
+  username      text unique not null,
+  email         text unique not null,
+  password_hash text not null,
+  level         int default 1,
+  xp            int default 0,
+  digi_bucks    int default 100,
+  pvp_wins      int default 0,
+  created_at    timestamptz default now()
+);
+*/
+
+// ── Session ──
+let currentPlayer = null;
+function saveSession(p) { localStorage.setItem('qa_session', JSON.stringify(p)); currentPlayer = p; }
+function loadSession()  { try { return JSON.parse(localStorage.getItem('qa_session')); } catch(e){ return null; } }
+function clearSession() { localStorage.removeItem('qa_session'); currentPlayer = null; }
+
+// ── Password hash ──
+async function hashPassword(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ── Stars ──
+function generateStars() {
+  const c = document.getElementById('stars-bg');
+  for (let i = 0; i < 130; i++) {
+    const s = document.createElement('div'); s.className = 'star';
+    const sz = Math.random() * 3 + 1;
+    s.style.cssText = `width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;animation-delay:${Math.random()*3}s;animation-duration:${1.5+Math.random()*2}s`;
+    c.appendChild(s);
+  }
+}
+
+// ── Auth UI helpers ──
+function switchTab(tab) {
+  document.getElementById('login-form').style.display    = tab === 'login' ? '' : 'none';
+  document.getElementById('register-form').style.display = tab === 'register' ? '' : 'none';
+  document.getElementById('tab-login').classList.toggle('active',    tab === 'login');
+  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  hideAuthError();
+}
+function showAuthError(msg) { const e=document.getElementById('auth-error'); e.textContent=msg; e.classList.add('show'); }
+function hideAuthError()    { document.getElementById('auth-error').classList.remove('show'); }
+
+// ── Demo mode ──
+function enterDemoMode() {
+  saveSession({ id:'demo', username:'DemoHero', level:1, digi_bucks:100, pvp_wins:0 });
+  document.getElementById('setup-banner').classList.add('show');
+  enterWorld();
+}
+
+// ── Login ──
+async function handleLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  if (!username || !password) return showAuthError('Please fill in all fields.');
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'Logging in...';
+  try {
+    const result = await QA.login(username, password);
+    if (result.error) { showAuthError(result.error); btn.disabled=false; btn.textContent='⚔ ENTER THE WORLD'; return; }
+    saveSession(result.data);
+    enterWorld();
+  } catch(e) {
+    showAuthError('Connection error. Please try again.');
+    btn.disabled=false; btn.textContent='⚔ ENTER THE WORLD';
+  }
+}
+
+// ── Register ──
+async function handleRegister() {
+  const username = document.getElementById('reg-username').value.trim();
+  const password = document.getElementById('reg-password').value;
+  if (!username || !password) return showAuthError('Please fill in all fields.');
+  const btn = document.getElementById('reg-btn');
+  btn.disabled = true; btn.textContent = 'Creating hero...';
+  try {
+    const result = await QA.register(username, password);
+    if (result.error) { showAuthError(result.error); btn.disabled=false; btn.textContent='★ CREATE HERO'; return; }
+    saveSession(result.data);
+    enterWorld();
+  } catch(e) {
+    showAuthError('Error creating account. Try again.');
+    btn.disabled=false; btn.textContent='★ CREATE HERO';
+  }
+}
+
+function handleLogout() { clearSession(); location.reload(); }
+
+// ── Leaderboard ──
+const DEMO_PLAYERS = [
+  { username:'StarSlayer',  level:42, digi_bucks:9820, pvp_wins:187 },
+  { username:'NovaMath',    level:38, digi_bucks:7441, pvp_wins:144 },
+  { username:'ZephyrBlade', level:35, digi_bucks:6100, pvp_wins:132 },
+  { username:'PixelWitch',  level:31, digi_bucks:5220, pvp_wins:99  },
+  { username:'IronCalc',    level:28, digi_bucks:4800, pvp_wins:78  },
+];
+
+async function loadLeaderboards() {
+  let players = DEMO_PLAYERS;
+  if (SUPABASE_URL !== 'https://lueqmpytuwxaotwmkgna.supabase.co') {
+    try {
+      const rows = await sb.select('players', 'select=username,level,digi_bucks,pvp_wins&order=digi_bucks.desc&limit=5');
+      if (Array.isArray(rows) && rows.length > 0) players = rows;
+    } catch(e) {}
+  }
+
+  const medals = ['gold','silver','bronze','',''];
+  function render(elId, data, sortKey, fmt) {
+    const sorted = [...data].sort((a,b) => b[sortKey]-a[sortKey]).slice(0,5);
+    document.getElementById(elId).innerHTML = sorted.map((p,i) => `
+      <div class="lb-row">
+        <span class="lb-rank ${medals[i]}">#${i+1}</span>
+        <span class="lb-player">${p.username}</span>
+        <span class="lb-score">${fmt(p[sortKey])}</span>
+      </div>`).join('');
+  }
+  render('lb-bucks', players, 'digi_bucks', v => v+'💰');
+  render('lb-level', players, 'level',      v => 'Lv.'+v);
+  render('lb-pvp',   players, 'pvp_wins',   v => v+'W');
+}
+
+// ── Avatar color from username ──
+function avatarColor(name) {
+  const colors = ['#ff6bdf','#44f7c8','#ffe066','#ff4e4e','#6c8fff','#ffb347'];
+  let h = 0; for (let i=0;i<name.length;i++) h = (h + name.charCodeAt(i)) % colors.length;
+  return colors[h];
+}
+
+// ── Enter World ──
+function enterWorld() {
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('hud').style.display = '';
+  const p = currentPlayer;
+  document.getElementById('hud-username').textContent = p.username;
+  document.getElementById('hud-level').textContent    = p.level || 1;
+  document.getElementById('hud-bucks').textContent    = p.digi_bucks || 0;
+  const av = document.getElementById('hud-avatar');
+  av.textContent  = (p.username || '?')[0].toUpperCase();
+  av.style.background = avatarColor(p.username || '?');
+  loadLeaderboards();
+  loadThreeJS();
+}
+
+// ══════════════════════════════════════════════
+//  THREE.JS WORLD
+// ══════════════════════════════════════════════
+function loadThreeJS() {
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js';
+  s.onload = buildWorld;
+  document.head.appendChild(s);
+}
+
+function buildWorld() {
+  const canvas = document.getElementById('game-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setClearColor(0x1a0533);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x1a0533, 90, 200);
+
+  const camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 500);
+  camera.position.set(0, 8, 18);
+
+  // Sky dome
+  const skyMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    uniforms: {
+      topColor:    { value: new THREE.Color(0x060d3a) },
+      bottomColor: { value: new THREE.Color(0x4a0880) }
+    },
+    vertexShader:   `varying vec3 vP; void main(){ vP=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+    fragmentShader: `uniform vec3 topColor,bottomColor; varying vec3 vP;
+      void main(){ float t=clamp((vP.y+150.)/300.,0.,1.); gl_FragColor=vec4(mix(bottomColor,topColor,t),1.); }`
+  });
+  scene.add(new THREE.Mesh(new THREE.SphereGeometry(300,16,16), skyMat));
+
+  // Lighting
+  scene.add(new THREE.AmbientLight(0x8877cc, 0.65));
+  const sun = new THREE.DirectionalLight(0xfff0cc, 1.2);
+  sun.position.set(30, 50, 20);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048,2048);
+  sun.shadow.camera.left = -50; sun.shadow.camera.right = 50;
+  sun.shadow.camera.top  =  50; sun.shadow.camera.bottom = -50;
+  sun.shadow.camera.far  = 200;
+  scene.add(sun);
+  const fill = new THREE.DirectionalLight(0x6644ff, 0.4);
+  fill.position.set(-20,10,-20); scene.add(fill);
+  const rim = new THREE.PointLight(0xff6bdf, 1.8, 80);
+  rim.position.set(0,15,0); scene.add(rim);
+
+  function mesh(geo, color, opts={}) {
+    const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color, ...opts }));
+    m.castShadow = true; m.receiveShadow = true;
+    scene.add(m); return m;
+  }
+  function at(m, x, y, z, rx=0, ry=0) {
+    m.position.set(x,y,z); m.rotation.x=rx; m.rotation.y=ry; return m;
+  }
+
+  // ── MAIN ISLAND ──
+  at(mesh(new THREE.CylinderGeometry(22,18,3.5,12), 0x4a3f6b),  0,  0,  0);
+  at(mesh(new THREE.CylinderGeometry(18, 8,  6, 10), 0x3a2e55),  0, -4,  0);
+  at(mesh(new THREE.ConeGeometry(8,8,8),              0x2a1e40),  0, -9,  0);
+  // Grass
+  at(mesh(new THREE.CylinderGeometry(22.1,22.1,.4,12), 0x44cc77), 0, 1.8, 0);
+
+  // ── PATHS ──
+  function path(x1,z1,x2,z2) {
+    const dx=x2-x1, dz=z2-z1, len=Math.sqrt(dx*dx+dz*dz);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.8, len),
+      new THREE.MeshLambertMaterial({ color:0xc8a96e }));
+    m.rotation.x = -Math.PI/2;
+    m.rotation.z = Math.atan2(dx,dz);
+    m.position.set((x1+x2)/2, 2.05, (z1+z2)/2);
+    m.receiveShadow = true; scene.add(m);
+  }
+  path(0,0,  0,-18);   // to Social City portal
+  path(0,0,-14, 10);   // to Campaign portal
+
+  // ── SPAWN CIRCLE ──
+  at(mesh(new THREE.CylinderGeometry(3,3,.25,20),
+    0xffe066, {emissive:0xffaa00, emissiveIntensity:.3}), 0, 2.1, 0);
+  const spawnRing = new THREE.Mesh(
+    new THREE.TorusGeometry(3.4,.1,8,40),
+    new THREE.MeshBasicMaterial({ color:0xffe066 }));
+  spawnRing.rotation.x = Math.PI/2;
+  spawnRing.position.set(0, 2.2, 0); scene.add(spawnRing);
+
+  // ── TREES ──
+  function tree(x, z, h=4, col=0x228822) {
+    at(mesh(new THREE.CylinderGeometry(.22,.32,h*.55,6), 0x7a5c3a), x, 2+h*.27, z);
+    at(mesh(new THREE.ConeGeometry(1.3,h,7), col),  x, 2+h*.7,  z);
+    at(mesh(new THREE.ConeGeometry(1.0,h*.75,7), col), x, 2+h*.9, z);
+  }
+  [[-14,4],[-16,-2],[-13,-8],[-8,12],[8,12],[14,4],[16,-2],[13,-8],[5,-13],[-5,-13],[0,14],[-10,0],[10,0]]
+    .forEach(([x,z]) => tree(x, z, 3+Math.random()*2.5, Math.random()>.5?0x228822:0x1a7733));
+
+  // ── FLOWERS ──
+  const fColors = [0xff6bdf,0xffe066,0xff4e4e,0x44f7c8,0xff9900];
+  for (let i=0;i<35;i++) {
+    const a=Math.random()*Math.PI*2, r=4+Math.random()*14;
+    const x=Math.cos(a)*r, z=Math.sin(a)*r;
+    if (Math.sqrt(x*x+z*z) > 20) continue;
+    const col = fColors[Math.floor(Math.random()*fColors.length)];
+    at(mesh(new THREE.CylinderGeometry(.04,.04,.55,5), 0x33aa44), x, 2.38, z);
+    at(mesh(new THREE.SphereGeometry(.16,6,6), col, {emissive:col,emissiveIntensity:.2}), x, 2.76, z);
+  }
+
+  // ── CRYSTALS ──
+  function crystals(x,z) {
+    [[0,2.4],[.5,2],[-.4,1.8]].forEach(([ox,h],i)=>{
+      const cols=[0x44f7c8,0x6c8fff,0xff6bdf];
+      const cg=new THREE.ConeGeometry(.28,h,5); cg.translate(0,h/2,0);
+      at(mesh(cg, cols[i], {emissive:cols[i],emissiveIntensity:.5,transparent:true,opacity:.8}),
+        x+ox, 1.8, z+(i*.3));
+    });
+  }
+  [[-18,-3],[17,3],[18,-4],[-17,5]].forEach(([x,z]) => crystals(x,z));
+
+  // ── PORTALS ──
+  function portal(x, z, col, rotY=0) {
+    const aMat = new THREE.MeshLambertMaterial({ color:col, emissive:col, emissiveIntensity:.5 });
+    const arch = new THREE.Mesh(new THREE.TorusGeometry(2.2,.22,8,24), aMat);
+    arch.position.set(x, 3.2, z); arch.rotation.y = rotY; scene.add(arch);
+
+    const surf = new THREE.Mesh(
+      new THREE.CircleGeometry(2, 32),
+      new THREE.MeshBasicMaterial({ color:col, transparent:true, opacity:.3, side:THREE.DoubleSide }));
+    surf.position.set(x, 3.2, z); surf.rotation.y = rotY; scene.add(surf);
+
+    const glow = new THREE.Mesh(new THREE.TorusGeometry(2.2,.06,8,32),
+      new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:.7 }));
+    glow.position.set(x,3.2,z); glow.rotation.y=rotY; scene.add(glow);
+
+    // Post + sign
+    at(mesh(new THREE.CylinderGeometry(.12,.12,3,6), 0x7a5c3a), x, 1.5, z+.5);
+    at(mesh(new THREE.BoxGeometry(2.8,.9,.12),
+      col, {emissive:col,emissiveIntensity:.35}), x, 3.55, z+.5);
+
+    // Ground glow
+    const gl = new THREE.PointLight(col, 2, 12);
+    gl.position.set(x, 1, z); scene.add(gl);
+
+    return { arch, surf, glow };
+  }
+
+  const portalSC  = portal(0,  -18, 0xff6bdf, 0);       // Social City (north)
+  const portalCMP = portal(-14,  10, 0x44f7c8, .5);      // Campaign (west)
+
+  // Portals metadata for proximity check
+  const portals = [
+    { mesh: portalSC.surf,  pos: new THREE.Vector3(0,   3.2, -18), name: 'Social City', dest: 'SocialCity' },
+    { mesh: portalCMP.surf, pos: new THREE.Vector3(-14, 3.2,  10), name: 'Campaign',    dest: 'Campaign'   },
+  ];
+
+  // ── LEADERBOARD PILLARS (in-world) ──
+  function lbPillar(x, z, col) {
+    at(mesh(new THREE.CylinderGeometry(.4,.5,5.5,8), 0x5a4888), x, 4, z);
+    at(mesh(new THREE.CylinderGeometry(.65,.65,.25,8), col, {emissive:col,emissiveIntensity:.4}), x, 7, z);
+    at(mesh(new THREE.BoxGeometry(2.5,3.2,.12), 0x110022, {emissive:0x110022}), x, 5.6, z);
+    const pl = new THREE.PointLight(col, 1.5, 8); pl.position.set(x,6,z); scene.add(pl);
+  }
+  lbPillar(-8, -7, 0xffe066);  // Digi-Bucks
+  lbPillar( 0,  9, 0x44f7c8);  // Levels
+  lbPillar( 8, -7, 0xff6bdf);  // PvP
+
+  // ── FLOATING MINI ISLANDS ──
+  function miniIsland(x,y,z,r) {
+    at(mesh(new THREE.CylinderGeometry(r,r*.7,1.5,8), 0x4a3f6b), x, y, z);
+    at(mesh(new THREE.CylinderGeometry(r,r,.3,8), 0x44cc77), x, y+.9, z);
+    tree(x, z, 3, 0x1a6633); // need to reposition
+    // just a simple tree on top
+    at(mesh(new THREE.CylinderGeometry(.2,.3,2,6), 0x7a5c3a), x, y+2.3, z);
+    at(mesh(new THREE.ConeGeometry(r*.4,2.5,7), 0x228822), x, y+4.5, z);
+  }
+  miniIsland(-38, -10, -8, 6);
+  miniIsland( 38, -12,  -6, 5);
+  miniIsland( 24, -14,  28, 4.5);
+  miniIsland(-25,  -8,  22, 7);
+
+  // ── CLOUDS ──
+  function cloud(cx,cy,cz,s) {
+    const m = new THREE.MeshLambertMaterial({ color:0xffffff, transparent:true, opacity:.65 });
+    [[0,0,0,3],[3,-.5,0,2.2],[-2.5,-.3,0,2.5],[1,1,0,1.8]].forEach(([ox,oy,oz,r])=>{
+      at(mesh(new THREE.SphereGeometry(r*s,7,7), 0xffffff, {transparent:true,opacity:.65}),
+        cx+ox*s, cy+oy*s, cz+oz*s);
+    });
+  }
+  [[-60,-5,-30,1.4],[-80,5,10,1.2],[55,0,-40,1.6],[72,8,30,1.0],[-45,12,-65,1.3],[32,-3,55,1.1]]
+    .forEach(([x,y,z,s])=>cloud(x,y,z,s));
+
+  // ── STARS (particles) ──
+  const starCount = 500;
+  const starPos   = new Float32Array(starCount*3);
+  for (let i=0;i<starCount*3;i++) starPos[i]=(Math.random()-.5)*500;
+  const sg = new THREE.BufferGeometry();
+  sg.setAttribute('position', new THREE.BufferAttribute(starPos,3));
+  scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color:0xffffff, size:.5 })));
+
+  // ── PLAYER CHARACTER ──
+  const player = new THREE.Group();
+  scene.add(player);
+  player.position.set(0, 2.25, 0);
+
+  // Shadow
+  const shadowD = new THREE.Mesh(new THREE.CircleGeometry(.5,12),
+    new THREE.MeshBasicMaterial({ color:0x000000, transparent:true, opacity:.2 }));
+  shadowD.rotation.x = -Math.PI/2; shadowD.position.y = .01; player.add(shadowD);
+
+  // Body
+  const body = new THREE.Mesh(new THREE.BoxGeometry(.7,1,.4),
+    new THREE.MeshLambertMaterial({ color:0x6c8fff }));
+  body.position.y = .5; body.castShadow=true; player.add(body);
+
+  // Head
+  const head = new THREE.Mesh(new THREE.BoxGeometry(.6,.6,.6),
+    new THREE.MeshLambertMaterial({ color:0xffcc99 }));
+  head.position.y = 1.25; head.castShadow=true; player.add(head);
+
+  // Eyes
+  [-1,1].forEach(side => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(.08,6,6),
+      new THREE.MeshBasicMaterial({ color:0x111111 }));
+    eye.position.set(.13*side, 1.28, .31); player.add(eye);
+  });
+
+  // Anime hair spikes
+  const hairHex = parseInt(avatarColor(currentPlayer?.username||'Hero').replace('#',''), 16);
+  for (let i=0;i<5;i++) {
+    const spike = new THREE.Mesh(new THREE.ConeGeometry(.08,.45,4),
+      new THREE.MeshLambertMaterial({ color:hairHex }));
+    spike.position.set((i-2)*.14, 1.68, 0);
+    spike.rotation.z = (i-2)*.22;
+    player.add(spike);
+  }
+
+  // Player glow
+  const playerGlow = new THREE.PointLight(0xffffff, .6, 4);
+  playerGlow.position.set(0,1,0); player.add(playerGlow);
+
+  // ── INPUT ──
+  const keys = {};
+  window.addEventListener('keydown', e => keys[e.code] = true);
+  window.addEventListener('keyup',   e => keys[e.code] = false);
+
+  // Camera orbit
+  let camYaw=0, camPitch=.42, camDist=16;
+  let isDragging=false, lastMX=0, lastMY=0;
+  canvas.addEventListener('mousedown', e => { if(e.button===2){ isDragging=true; lastMX=e.clientX; lastMY=e.clientY; } });
+  window.addEventListener('mouseup',   e => { if(e.button===2) isDragging=false; });
+  window.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    camYaw   -= (e.clientX-lastMX) * .005;
+    camPitch  = Math.max(.1, Math.min(1.3, camPitch + (e.clientY-lastMY)*.005));
+    lastMX=e.clientX; lastMY=e.clientY;
+  });
+  canvas.addEventListener('wheel', e => {
+    camDist = Math.max(6, Math.min(40, camDist + e.deltaY*.02));
+  }, { passive:true });
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+  // Portal enter
+  let nearPortal = null;
+  window.addEventListener('keydown', e => {
+    if (e.code === 'KeyE' && nearPortal) {
+      showToast('🌀 Entering ' + nearPortal.name + '...');
+      setTimeout(() => {
+        if (nearPortal.dest === 'SocialCity')
+          window.location.href = 'SocialCity.html';
+        else
+          window.location.href = 'World0_Grasslands.html';
+      }, 800);
+    }
+  });
+
+  // ── ANIMATION LOOP ──
+  let t = 0;
+  let lastTime = performance.now();
+
+  function animate(now) {
+    requestAnimationFrame(animate);
+    const dt = Math.min((now - lastTime) / 1000, .05);
+    lastTime = now;
+    t += dt;
+
+    // Movement
+    const speed = 6 * dt;
+    const fwd   = new THREE.Vector3( Math.sin(camYaw), 0,  Math.cos(camYaw));
+    const right  = new THREE.Vector3( Math.cos(camYaw), 0, -Math.sin(camYaw));
+    const dir    = new THREE.Vector3();
+
+    if (keys['KeyW']||keys['ArrowUp'])    dir.add(fwd);
+    if (keys['KeyS']||keys['ArrowDown'])  dir.sub(fwd);
+    if (keys['KeyA']||keys['ArrowLeft'])  dir.add(right);
+    if (keys['KeyD']||keys['ArrowRight']) dir.sub(right);
+
+    if (dir.lengthSq() > 0.001) {
+      dir.normalize().multiplyScalar(speed);
+      const np = player.position.clone().add(dir);
+      if (np.x*np.x + np.z*np.z < 19*19) {
+        player.position.add(dir);
+        player.rotation.y = Math.atan2(dir.x, dir.z);
+      }
+    }
+
+    // Bob
+    player.position.y = 2.25 + Math.sin(t*3.2)*.05;
+
+    // Animate portals
+    portalSC.surf.material.opacity  = .2 + Math.sin(t*2)*.15;
+    portalCMP.surf.material.opacity = .2 + Math.sin(t*2+1)*.15;
+    portalSC.glow.rotation.z  = t * .9;
+    portalCMP.glow.rotation.z = t * .9;
+    spawnRing.rotation.z = t * .5;
+
+    // Proximity check
+    nearPortal = null;
+    portals.forEach(p => {
+      if (player.position.distanceTo(p.pos) < 5) nearPortal = p;
+    });
+    document.getElementById('portal-prompt').style.display = nearPortal ? 'block' : 'none';
+
+    // Camera
+    const offset = new THREE.Vector3(
+      -Math.sin(camYaw) * Math.cos(camPitch) * camDist,
+      Math.sin(camPitch) * camDist,
+      -Math.cos(camYaw) * Math.cos(camPitch) * camDist
+    );
+    camera.position.copy(player.position).add(offset);
+    camera.lookAt(player.position.clone().add(new THREE.Vector3(0,.9,0)));
+
+    renderer.render(scene, camera);
+  }
+
+  window.addEventListener('resize', () => {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+  });
+
+  requestAnimationFrame(animate);
+}
+
+// ── Toast ──
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ── INIT ──
+generateStars();
+
+// Loading sequence
+const loadBar  = document.getElementById('loading-bar');
+const loadText = document.getElementById('loading-text');
+const steps = [[20,'LOADING ASSETS...'],[50,'BUILDING THE ISLAND...'],[75,'PLACING PORTALS...'],[95,'SUMMONING HEROES...']];
+let si = 0;
+const lInt = setInterval(() => {
+  if (si < steps.length) {
+    loadBar.style.width = steps[si][0] + '%';
+    loadText.textContent = steps[si][1];
+    si++;
+  } else {
+    loadBar.style.width = '100%';
+    loadText.textContent = 'WELCOME, HERO!';
+    clearInterval(lInt);
+    setTimeout(() => {
+      const loading = document.getElementById('loading');
+      loading.classList.add('fade');
+      setTimeout(() => loading.remove(), 500);
+      const sess = loadSession();
+      if (sess) { currentPlayer = sess; enterWorld(); }
+    }, 700);
+  }
+}, 420);
+
+// ── HUB MUSIC ──
+(function(){
+  let _audioCtx=null,_src=null,_started=false;
+  function startHubMusic(){
+    if(_started)return; _started=true;
+    _audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    const gain=_audioCtx.createGain(); gain.gain.value=0.45; gain.connect(_audioCtx.destination);
+    fetch('ost_hub.mp3').then(r=>r.arrayBuffer()).then(buf=>_audioCtx.decodeAudioData(buf)).then(dec=>{
+      _src=_audioCtx.createBufferSource(); _src.buffer=dec; _src.loop=true;
+      _src.connect(gain); _src.start(0);
+    }).catch(e=>console.warn('Hub music fail:',e));
+  }
+  const btn=document.createElement('button');
+  btn.textContent='♪ ON';
+  btn.style.cssText='position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:999;font-family:"Press Start 2P",monospace;font-size:5px;padding:4px 10px;background:rgba(0,0,0,.7);border:1px solid #444;border-radius:2px;color:#555;cursor:pointer;';
+  let on=true;
+  btn.onclick=()=>{
+    if(on&&_src){try{_src.stop();}catch(e){}_src=null;_started=false;on=false;btn.textContent='♪ OFF';}
+    else if(!on){on=true;btn.textContent='♪ ON';_started=false;startHubMusic();}
+  };
+  document.body.appendChild(btn);
+  document.addEventListener('keydown',startHubMusic,{once:true});
+  document.addEventListener('click',startHubMusic,{once:true});
+})();
+</script>
+</body>
+</html>
